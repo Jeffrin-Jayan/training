@@ -79,6 +79,7 @@ class SchemeEligibilityRule(db.Model):
     requires_widow: Mapped[bool] = mapped_column(Boolean, default=False)
     requires_student: Mapped[bool] = mapped_column(Boolean, default=False)
     requires_farmer: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_entrepreneur: Mapped[bool] = mapped_column(Boolean, default=False)
     
     scheme = relationship("Scheme", back_populates="eligibility_rules")
 

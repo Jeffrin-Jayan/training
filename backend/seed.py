@@ -116,7 +116,8 @@ def seed_database(app):
                     "requires_disability": False,
                     "requires_widow": False,
                     "requires_student": False,
-                    "requires_farmer": False
+                    "requires_farmer": False,
+                    "requires_entrepreneur": True
                 },
                 "documents": [
                     {"name": "Aadhaar Card", "is_mandatory": True, "description": "Identity proof"},
@@ -207,7 +208,8 @@ def seed_database(app):
                 requires_disability=r_data["requires_disability"],
                 requires_widow=r_data["requires_widow"],
                 requires_student=r_data["requires_student"],
-                requires_farmer=r_data["requires_farmer"]
+                requires_farmer=r_data["requires_farmer"],
+                requires_entrepreneur=r_data.get("requires_entrepreneur", False)
             )
             db.session.add(r)
             
