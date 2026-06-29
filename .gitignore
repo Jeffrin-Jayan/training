@@ -1,0 +1,16 @@
+# Python Caches
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Databases & Credentials
+*.db
+instance/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
