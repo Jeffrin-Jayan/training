@@ -1,7 +1,9 @@
 import requests
 import streamlit as st
+import os
 
-API_URL = "http://localhost:5000/api"
+# Support Docker deployment URL overrides
+API_URL = os.environ.get("BACKEND_API_URL", "http://localhost:5000/api")
 
 def register_user(email, password, full_name, age, gender, occupation, income, state):
     payload = {
@@ -27,6 +29,20 @@ def login_user(email, password):
         return r.json(), r.status_code
     except Exception as e:
         return {"error": f"Connection failed: {str(e)}"}, 500
+
+def forgot_password(email):
+    try:
+        r = requests.post(f"{API_URL}/auth/forgot_password", json={"email": email})
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+def reset_password(email, new_password):
+    try:
+        r = requests.post(f"{API_URL}/auth/reset_password", json={"email": email, "new_password": new_password})
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 def get_profile(user_id):
     try:
@@ -211,6 +227,55 @@ def get_office_types():
         pass
     return []
 
+# Life Event APIs
+def get_life_events():
+    try:
+         r = requests.get(f"{API_URL}/life_events/list")
+         if r.status_code == 200:
+             return r.json()
+    except Exception:
+         pass
+    return []
+
+def get_life_event_details(event_id):
+    try:
+        r = requests.get(f"{API_URL}/life_events/details/{event_id}")
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+# Checklist & Application Guide
+def get_document_checklist(scheme_id):
+    try:
+        r = requests.get(f"{API_URL}/schemes/checklist/{scheme_id}")
+        return r.json(), r.status_code
+    except Exception as e:
+         return {"error": str(e)}, 500
+
+def get_application_guide(scheme_id):
+    try:
+        r = requests.get(f"{API_URL}/schemes/application_guide/{scheme_id}")
+        return r.json(), r.status_code
+    except Exception as e:
+         return {"error": str(e)}, 500
+
+# Notifications
+def get_notifications(user_id):
+    try:
+        r = requests.get(f"{API_URL}/notifications/list/{user_id}")
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return []
+
+def mark_notification_read(notification_id):
+    try:
+        r = requests.post(f"{API_URL}/notifications/read/{notification_id}")
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
+
 # Admin APIs
 def get_admin_analytics():
     try:
@@ -220,6 +285,28 @@ def get_admin_analytics():
     except Exception:
         pass
     return {}
+
+def get_admin_user_activity():
+    try:
+        r = requests.get(f"{API_URL}/admin/user_activity")
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return {"users": [], "admin_logs": []}
+
+def update_scheme_rules(scheme_id, scheme_payload):
+    try:
+        r = requests.put(f"{API_URL}/admin/update_scheme/{scheme_id}", json=scheme_payload)
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+def log_analytics_event(event_type, payload):
+    try:
+        requests.post(f"{API_URL}/admin/log_event", json={"event_type": event_type, "payload": payload})
+    except Exception:
+        pass
 
 def upload_rag_pdf(file):
     files = {"file": (file.name, file.getvalue(), "application/pdf")}
