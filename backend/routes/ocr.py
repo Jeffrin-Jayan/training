@@ -87,6 +87,18 @@ def extract_ocr():
             "gender": "Male",
             "income": "₹75,000"
         }
+    elif "driving" in filename or "licence" in filename or "license" in filename or "dl" in filename or "motor vehicle" in extracted_text.lower():
+        structured_data = {
+            "document_type": "Driving Licence",
+            "name": "RAJESH KUMAR",
+            "id_number": "KL-13-20190002948",
+            "dob": "12/08/1992",
+            "gender": "Male",
+            "income": "N/A",
+            "licence_type": "LMV / MCWG",
+            "validity": "12/08/2039",
+            "issuing_authority": "RTO Palakkad, Kerala"
+        }
     else:
         # Default fallback mockup parsing of regular images
         structured_data = {

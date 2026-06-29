@@ -17,6 +17,7 @@ from routes.office_finder import office_finder_bp
 from routes.dashboard import dashboard_bp
 from routes.notifications import notifications_bp
 from routes.admin import admin_bp
+from routes.life_events import life_events_bp
 
 def create_app():
     app = Flask(__name__)
@@ -40,6 +41,7 @@ def create_app():
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(life_events_bp, url_prefix='/api/life_events')
     
     @app.route('/health', methods=['GET'])
     def health():

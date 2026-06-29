@@ -303,3 +303,175 @@ def get_bookmarks(user_id):
                 "description": s.description
             })
     return jsonify(results), 200
+
+
+@schemes_bp.route('/checklist/<int:scheme_id>', methods=['GET'])
+def document_checklist(scheme_id):
+    """Returns categorized document checklist with validity tips."""
+    scheme = Scheme.query.get(scheme_id)
+    if not scheme:
+        return jsonify({"error": "Scheme not found"}), 404
+
+    docs = SchemeDocument.query.filter_by(scheme_id=scheme_id).all()
+
+    required_docs = []
+    optional_docs = []
+
+    # Standard validity tips database
+    validity_map = {
+        "aadhaar card": "Lifetime validity. Update address if moved. Ensure mobile number is linked.",
+        "pan card": "Lifetime validity. Must be linked with Aadhaar.",
+        "income certificate": "Typically valid for 1 year from date of issue. Renew annually.",
+        "caste certificate": "Lifetime validity once issued by competent authority.",
+        "bank account passbook": "Must show recent transactions (within last 3 months). Ensure IFSC code is visible.",
+        "land holding documents": "Must be current season RoR (Record of Rights). Verify with Tehsildar office.",
+        "birth certificate": "Lifetime validity. Keep original safe for passport applications.",
+        "age proof certificate": "Lifetime validity. School leaving certificate or birth certificate accepted.",
+        "bpl ration card": "Renewed during NFSA surveys. Verify eligibility status annually.",
+        "marksheet": "Lifetime validity. Attested copies accepted for most applications.",
+        "project report": "Must be current. Include cost estimates, revenue projections, and employment plan.",
+        "job card under mgnrega": "Must be active for current financial year. Renew at Gram Panchayat.",
+        "passport": "Valid for 10 years (adults) / 5 years (minors). Renew 1 year before expiry.",
+        "driving licence": "Valid for 20 years from date of issue or until age 50 (whichever is later).",
+        "marriage certificate": "Lifetime validity. Essential for spouse-related benefit claims.",
+        "disability certificate": "Permanent for 80%+ disability. Others need renewal as per medical board.",
+        "domicile certificate": "Typically lifetime validity. Some states require renewal.",
+        "voter id": "Lifetime validity. Update address when you relocate."
+    }
+
+    for d in docs:
+        doc_name_lower = d.document_name.lower()
+        validity_tip = validity_map.get(doc_name_lower, "Verify validity with the issuing authority before submission.")
+
+        doc_entry = {
+            "name": d.document_name,
+            "description": d.description or "",
+            "is_mandatory": d.is_mandatory,
+            "validity_tip": validity_tip
+        }
+
+        if d.is_mandatory:
+            required_docs.append(doc_entry)
+        else:
+            optional_docs.append(doc_entry)
+
+    # Common missing documents advisory
+    common_missing = []
+    doc_names_lower = [d.document_name.lower() for d in docs]
+    if "aadhaar card" not in doc_names_lower:
+        common_missing.append({"name": "Aadhaar Card", "reason": "Most government schemes require Aadhaar for DBT verification."})
+    if "bank account passbook" not in doc_names_lower and "bank passbook details" not in doc_names_lower:
+        common_missing.append({"name": "Bank Account Passbook", "reason": "Needed for Direct Benefit Transfer (DBT) of scheme funds."})
+    if "passport photo" not in doc_names_lower:
+        common_missing.append({"name": "Recent Passport-size Photographs", "reason": "Typically required for physical applications and ID verification."})
+
+    return jsonify({
+        "scheme_name": scheme.name,
+        "scheme_id": scheme.id,
+        "required_documents": required_docs,
+        "optional_documents": optional_docs,
+        "commonly_missing": common_missing,
+        "total_required": len(required_docs),
+        "total_optional": len(optional_docs)
+    }), 200
+
+
+@schemes_bp.route('/application_guide/<int:scheme_id>', methods=['GET'])
+def application_guide(scheme_id):
+    """Returns step-by-step application guide with estimated times."""
+    scheme = Scheme.query.get(scheme_id)
+    if not scheme:
+        return jsonify({"error": "Scheme not found"}), 404
+
+    docs = SchemeDocument.query.filter_by(scheme_id=scheme_id, is_mandatory=True).all()
+    doc_names = [d.document_name for d in docs]
+
+    # Build application steps
+    steps = [
+        {
+            "step_number": 1,
+            "title": "Registration & Account Setup",
+            "description": f"Visit the official portal ({scheme.application_url or 'scheme portal'}) and create an account. Use your Aadhaar-linked mobile number for OTP verification.",
+            "estimated_time": "10-15 minutes",
+            "tips": [
+                "Use a valid email address you check regularly for updates.",
+                "Save your registration ID / application reference number."
+            ]
+        },
+        {
+            "step_number": 2,
+            "title": "Profile Verification & KYC",
+            "description": "Complete your profile by providing personal details — name, date of birth, address, occupation, and family income. Some portals verify through Aadhaar eKYC.",
+            "estimated_time": "10-20 minutes",
+            "tips": [
+                "Ensure your Aadhaar details match exactly (name spelling, DOB).",
+                "If eKYC fails, you may need to visit a Common Service Centre (CSC)."
+            ]
+        },
+        {
+            "step_number": 3,
+            "title": "Document Upload",
+            "description": f"Upload scanned copies of the required documents: {', '.join(doc_names)}. Ensure files are clear, properly oriented, and under the size limit (usually 2MB per file).",
+            "estimated_time": "15-30 minutes",
+            "tips": [
+                "Scan documents at 200-300 DPI for clarity.",
+                "PDF format is preferred. JPEG is acceptable for photos and cards.",
+                "Self-attest all copies before uploading."
+            ]
+        },
+        {
+            "step_number": 4,
+            "title": "Payment of Fees (If Applicable)",
+            "description": "Some schemes require nominal processing fees. Payment is usually via UPI, Net Banking, or Challan. Most central welfare schemes are FREE.",
+            "estimated_time": "5-10 minutes",
+            "tips": [
+                "Save the payment receipt / transaction ID.",
+                "If the scheme is free, this step will be skipped on the portal."
+            ]
+        },
+        {
+            "step_number": 5,
+            "title": "Application Review & Submission",
+            "description": "Review all filled details and uploaded documents carefully. Submit the application and note down the Application Reference Number (ARN).",
+            "estimated_time": "5-10 minutes",
+            "tips": [
+                "Double-check spelling, income figures, and bank account numbers.",
+                "Take a screenshot of the confirmation page."
+            ]
+        },
+        {
+            "step_number": 6,
+            "title": "Verification & Approval",
+            "description": "The concerned department will verify your application. This may involve field verification by a local officer (Block Development Officer / Gram Sevak).",
+            "estimated_time": "7-45 days (varies by scheme and state)",
+            "tips": [
+                "Keep your phone accessible — you may receive calls from verifying officers.",
+                "Visit the local office if verification is delayed beyond expected timeline."
+            ]
+        },
+        {
+            "step_number": 7,
+            "title": "Tracking & Status Updates",
+            "description": f"Track your application status using the reference number on the official portal ({scheme.application_url or 'scheme portal'}). You will also receive SMS updates.",
+            "estimated_time": "Ongoing",
+            "tips": [
+                "Check status weekly until approval.",
+                "Contact the helpline number if status shows 'pending' for over 30 days.",
+                "Use the GovAssist AI dashboard to track all your applications in one place."
+            ]
+        }
+    ]
+
+    # Estimated total completion
+    total_estimate = "15-60 days end-to-end (varies by scheme complexity, verification backlog, and state processing speed)"
+
+    return jsonify({
+        "scheme_name": scheme.name,
+        "scheme_id": scheme.id,
+        "application_url": scheme.application_url,
+        "ministry": scheme.ministry,
+        "steps": steps,
+        "estimated_total_completion": total_estimate,
+        "required_documents": doc_names,
+        "helpline_tip": "For issues, contact the scheme's toll-free helpline or visit the nearest Common Service Centre (CSC) / Akshaya Centre."
+    }), 200

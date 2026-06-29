@@ -139,3 +139,56 @@ def update_profile(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Failed to update profile: {str(e)}"}), 500
+
+
+@auth_bp.route('/forgot_password', methods=['POST'])
+def forgot_password():
+    """Simulates password reset for hackathon demo. In production, would send email with reset token."""
+    data = request.get_json() or {}
+    email = data.get('email')
+    
+    if not email:
+        return jsonify({"error": "Email address is required"}), 400
+        
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        # Don't reveal whether email exists for security
+        return jsonify({"message": "If this email is registered, a password reset link has been sent. Check your inbox."}), 200
+    
+    # In production: generate a JWT token, send email with reset link
+    # For hackathon demo: we acknowledge and let them reset directly
+    import secrets
+    reset_token = secrets.token_urlsafe(32)
+    
+    return jsonify({
+        "message": "Password reset initiated. For this demo, use the reset endpoint below.",
+        "demo_reset_token": reset_token,
+        "email": email,
+        "note": "In production, this token would be emailed to the user. For demo, use /api/auth/reset_password."
+    }), 200
+
+
+@auth_bp.route('/reset_password', methods=['POST'])
+def reset_password():
+    """Reset password for a user (demo-friendly; no real token validation)."""
+    data = request.get_json() or {}
+    email = data.get('email')
+    new_password = data.get('new_password')
+    
+    if not email or not new_password:
+        return jsonify({"error": "Email and new password are required"}), 400
+    
+    if len(new_password) < 4:
+        return jsonify({"error": "Password must be at least 4 characters"}), 400
+    
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "User not found with this email"}), 404
+    
+    try:
+        user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        return jsonify({"message": "Password reset successfully. You can now login with your new password."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to reset password: {str(e)}"}), 500
