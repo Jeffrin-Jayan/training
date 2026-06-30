@@ -14,8 +14,8 @@ def seed_database(app):
         print("Seeding database...")
         
         # 1. Users & Profiles
-        admin_pass = generate_password_hash("admin123")
-        user_pass = generate_password_hash("user123")
+        admin_pass = generate_password_hash("admin123", method='pbkdf2:sha256')
+        user_pass = generate_password_hash("user123", method='pbkdf2:sha256')
         
         admin = User(email="admin@govassist.in", password_hash=admin_pass, role="admin")
         user = User(email="citizen@govassist.in", password_hash=user_pass, role="user")

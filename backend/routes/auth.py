@@ -21,7 +21,7 @@ def register():
     try:
         new_user = User(
             email=email,
-            password_hash=generate_password_hash(password),
+            password_hash=generate_password_hash(password, method='pbkdf2:sha256'),
             role=role
         )
         db.session.add(new_user)
@@ -186,7 +186,7 @@ def reset_password():
         return jsonify({"error": "User not found with this email"}), 404
     
     try:
-        user.password_hash = generate_password_hash(new_password)
+        user.password_hash = generate_password_hash(new_password, method='pbkdf2:sha256')
         db.session.commit()
         return jsonify({"message": "Password reset successfully. You can now login with your new password."}), 200
     except Exception as e:

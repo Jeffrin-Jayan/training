@@ -215,6 +215,21 @@ def search_schemes():
     output = []
     for s in results:
         docs = [{"name": d.document_name, "mandatory": d.is_mandatory} for d in s.documents]
+        rules_dict = {}
+        if s.eligibility_rules:
+            rules_dict = {
+                "min_age": s.eligibility_rules.min_age,
+                "max_age": s.eligibility_rules.max_age,
+                "max_income": s.eligibility_rules.max_income,
+                "allowed_genders": s.eligibility_rules.allowed_genders,
+                "allowed_occupations": s.eligibility_rules.allowed_occupations,
+                "allowed_states": s.eligibility_rules.allowed_states,
+                "requires_disability": s.eligibility_rules.requires_disability,
+                "requires_widow": s.eligibility_rules.requires_widow,
+                "requires_student": s.eligibility_rules.requires_student,
+                "requires_farmer": s.eligibility_rules.requires_farmer,
+                "requires_entrepreneur": s.eligibility_rules.requires_entrepreneur,
+            }
         output.append({
             "id": s.id,
             "name": s.name,
@@ -224,7 +239,8 @@ def search_schemes():
             "ministry": s.ministry,
             "state": s.state,
             "application_url": s.application_url,
-            "documents": docs
+            "documents": docs,
+            "rules": rules_dict
         })
     return jsonify(output), 200
 

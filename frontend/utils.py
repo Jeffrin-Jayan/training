@@ -339,3 +339,11 @@ def summarize_rag_pdf(file):
         return r.json(), r.status_code
     except Exception as e:
         return {"error": str(e)}, 500
+
+def add_scheme_admin(payload):
+    try:
+        r = requests.post(f"{API_URL}/admin/add_scheme", json=payload)
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
+

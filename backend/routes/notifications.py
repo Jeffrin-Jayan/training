@@ -3,7 +3,7 @@ from database import db, Notification
 
 notifications_bp = Blueprint('notifications', __name__)
 
-@notifications_bp.route('/<int:user_id>', methods=['GET'])
+@notifications_bp.route('/list/<int:user_id>', methods=['GET'])
 def get_notifications(user_id):
     notifs = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all()
     results = []
@@ -16,14 +16,8 @@ def get_notifications(user_id):
         })
     return jsonify(results), 200
 
-@notifications_bp.route('/read', methods=['POST'])
-def mark_read():
-    data = request.get_json() or {}
-    notification_id = data.get('notification_id')
-    
-    if not notification_id:
-        return jsonify({"error": "Notification ID is required"}), 400
-        
+@notifications_bp.route('/read/<int:notification_id>', methods=['POST'])
+def mark_read(notification_id):
     n = Notification.query.get(notification_id)
     if not n:
         return jsonify({"error": "Notification not found"}), 404

@@ -6,6 +6,7 @@ import io
 import time
 import os
 from utils import (
+    API_URL,
     register_user, login_user, forgot_password, reset_password, get_profile, update_profile,
     get_dashboard_stats, get_applications, apply_scheme, get_recommendations, check_eligibility,
     search_schemes, toggle_bookmark, get_bookmarks, compare_schemes,
@@ -14,7 +15,8 @@ from utils import (
     get_offices, get_office_types, get_life_events, get_life_event_details,
     get_document_checklist, get_application_guide, get_notifications, mark_notification_read,
     get_admin_analytics, get_admin_user_activity, update_scheme_rules, log_analytics_event,
-    upload_rag_pdf, list_rag_pdfs, delete_rag_pdf, summarize_rag_pdf
+    upload_rag_pdf, list_rag_pdfs, delete_rag_pdf, summarize_rag_pdf,
+    add_scheme_admin
 )
 
 # Set page configuration with premium dark look
@@ -902,28 +904,37 @@ else:
                     sc_benefits = st.text_input("Benefits details", value="Initial working capital loan up to ₹10,000.")
                     sc_cat = st.selectbox("Category", ["Business", "Agriculture", "Education", "Social Welfare"])
                     sc_min = st.text_input("Ministry", value="Ministry of Housing and Urban Affairs")
-                    sc_st = st.selectbox("State scope", ["Central", "Delhi", "Kerala"])
+                    sc_st = st.selectbox("State scope", ["Central", "Delhi", "Kerala", "Maharashtra", "Tamil Nadu"])
                     min_a = st.number_input("Min Age restriction", value=18)
                     max_a = st.number_input("Max Age restriction", value=75)
                     max_i = st.number_input("Max Income limit", value=300000.0)
                     requires_student = st.checkbox("Requires Student status")
                     requires_farmer = st.checkbox("Requires Farmer status")
                     requires_entrepreneur = st.checkbox("Requires Entrepreneur status", value=True)
+                    requires_disability = st.checkbox("Requires Disability status")
+                    requires_widow = st.checkbox("Requires Widow status")
                 else:
                     # Load existing data
                     matched_s = next(s for s in all_schemes_list if s["id"] == sel_id_for_edit)
+                    rules = matched_s.get("rules", {})
                     sc_name = st.text_input("Scheme Name", value=matched_s["name"])
                     sc_desc = st.text_area("Description", value=matched_s["description"])
                     sc_benefits = st.text_input("Benefits details", value=matched_s["benefits"])
                     sc_cat = st.selectbox("Category", ["Business", "Agriculture", "Education", "Social Welfare"], index=["Business", "Agriculture", "Education", "Social Welfare"].index(matched_s["category"]))
                     sc_min = st.text_input("Ministry", value=matched_s["ministry"])
-                    sc_st = st.selectbox("State scope", ["Central", "Delhi", "Kerala", "Maharashtra", "Tamil Nadu"], index=0)
-                    min_a = st.number_input("Min Age restriction", value=18)
-                    max_a = st.number_input("Max Age restriction", value=75)
-                    max_i = st.number_input("Max Income limit", value=300000.0)
-                    requires_student = st.checkbox("Requires Student status")
-                    requires_farmer = st.checkbox("Requires Farmer status")
-                    requires_entrepreneur = st.checkbox("Requires Entrepreneur status")
+                    
+                    states_opts = ["Central", "Delhi", "Kerala", "Maharashtra", "Tamil Nadu"]
+                    state_idx = states_opts.index(matched_s["state"]) if matched_s["state"] in states_opts else 0
+                    sc_st = st.selectbox("State scope", states_opts, index=state_idx)
+                    
+                    min_a = st.number_input("Min Age restriction", value=int(rules.get('min_age', 18)))
+                    max_a = st.number_input("Max Age restriction", value=int(rules.get('max_age', 75)))
+                    max_i = st.number_input("Max Income limit", value=float(rules.get('max_income', 300000.0)))
+                    requires_student = st.checkbox("Requires Student status", value=bool(rules.get('requires_student', False)))
+                    requires_farmer = st.checkbox("Requires Farmer status", value=bool(rules.get('requires_farmer', False)))
+                    requires_entrepreneur = st.checkbox("Requires Entrepreneur status", value=bool(rules.get('requires_entrepreneur', False)))
+                    requires_disability = st.checkbox("Requires Disability status", value=bool(rules.get('requires_disability', False)))
+                    requires_widow = st.checkbox("Requires Widow status", value=bool(rules.get('requires_widow', False)))
                     
                 sub_managed = st.form_submit_button("Submit Scheme Update / Creation")
                 if sub_managed:
@@ -940,7 +951,9 @@ else:
                             "max_income": max_i,
                             "requires_student": requires_student,
                             "requires_farmer": requires_farmer,
-                            "requires_entrepreneur": requires_entrepreneur
+                            "requires_entrepreneur": requires_entrepreneur,
+                            "requires_disability": requires_disability,
+                            "requires_widow": requires_widow
                         }
                     }
                     if sel_id_for_edit == 0:
@@ -948,12 +961,11 @@ else:
                         payload["documents"] = [
                             {"name": "Aadhaar Card", "is_mandatory": True, "description": "Identity verification"}
                         ]
-                        import requests
-                        r = requests.post(f"{API_URL}/admin/add_scheme", json=payload)
-                        if r.status_code == 201:
+                        res, add_code = add_scheme_admin(payload)
+                        if add_code == 201:
                             st.success("New scheme successfully injected!")
                             st.rerun()
-                        else: st.error(r.json().get("error", "Error creating scheme"))
+                        else: st.error(res.get("error", "Error creating scheme"))
                     else:
                         # Update
                         res, u_code = update_scheme_rules(sel_id_for_edit, payload)
