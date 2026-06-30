@@ -135,14 +135,27 @@ class AIEngine:
         return self.vector_store_fallback.similarity_search(query, k)
 
     def generate_response(self, system_prompt, user_query, retrieved_chunks=None):
-        """Queries local Ollama Llama 3, falling back to a smart mock response if Ollama is unavailable."""
+        """Queries Gemini API if available, falling back to local Ollama Llama 3, and then smart mock response."""
         context = ""
         if retrieved_chunks:
             context = "\n---\n".join([c["text"] for c in retrieved_chunks])
             
         full_prompt = f"{system_prompt}\n\nContext:\n{context}\n\nQuestion: {user_query}\nAnswer:"
         
-        # 1. Attempt to hit local Ollama instance (default port 11434)
+        # 1. Attempt Gemini API if key is available
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        if gemini_api_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=gemini_api_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = model.generate_content(full_prompt)
+                if response.text:
+                    return response.text
+            except Exception as e:
+                print(f"Gemini API failed: {e}")
+
+        # 2. Attempt to hit local Ollama instance (default port 11434)
         ollama_url = "http://localhost:11434/api/generate"
         payload = {
             "model": "llama3",
@@ -158,7 +171,7 @@ class AIEngine:
             # Ollama not running/reachable; fall back to the smart heuristics response
             pass
             
-        # 2. Heuristics Mock Generator
+        # 3. Heuristics Mock Generator
         return self._generate_smart_mock_response(user_query, retrieved_chunks)
 
     def _generate_smart_mock_response(self, query, context_chunks):

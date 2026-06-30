@@ -1,4 +1,9 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from config import Config
@@ -57,4 +62,4 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     # Runs on port 5000
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
